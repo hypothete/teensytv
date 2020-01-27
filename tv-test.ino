@@ -5,9 +5,8 @@
 #define HEIGHT 242
 #define VHEIGHT 39
 
-int lineCount = 0;
-bool evenFrame = true;
-int frameCount = 0;
+volatile int frameCount = 0;
+volatile bool vblank = false;
 bool * dst_buf = (bool*)malloc(WIDTH * VHEIGHT);
 
 void setupBuffer() {
@@ -19,83 +18,69 @@ void setupBuffer() {
     int dx = W2 - x;
     int dy = H2 - y;
     int hypo = sqrt(dx*dx + dy*dy);
-    dst_buf[i] = x % 2 ^ y % 2;
-//    dst_buf[i] = hypo < H2 * (sin((float)(frameCount / 32.0)) + 1);
+    dst_buf[i] = sin((float)(hypo - frameCount / 2.0)) > 0;
   }
 }
 
-void setPx(int x, int y, bool val) {
-  dst_buf[x + WIDTH * y] = val;
+void drawBuffer(int x, int y) {
+  int i = x - 9;
+  int j = VHEIGHT * (y - 19) / HEIGHT;
+  digitalWriteFast(VID_PIN, dst_buf[i + j * WIDTH]);
 }
 
-void drawBuffer() {
-  for(int i=0; i < WIDTH; i++) {
-    int y = VHEIGHT * lineCount / HEIGHT;
-    digitalWriteFast(VID_PIN, dst_buf[i + y * WIDTH]);
-    delayMicroseconds(1);
+void scanline(int x, int y) {
+  if (x < 5) {
+    // sync
+    digitalWriteFast(VID_PIN, LOW);
+    digitalWriteFast(SYNC_PIN,LOW);
+  }
+  else if(x < 10) {
+    // back porch
+    digitalWriteFast(VID_PIN, LOW);
+    digitalWriteFast(SYNC_PIN,HIGH);
+  }
+  else if(x < 62) {
+    drawBuffer(x, y);
+//    digitalWriteFast(VID_PIN, HIGH);
+    digitalWriteFast(SYNC_PIN,HIGH);
+  }
+  else {
+    digitalWriteFast(VID_PIN,  LOW);
+    digitalWriteFast(SYNC_PIN,HIGH);
   }
 }
 
-void scanline() {
-  // sync
+void vsync(int x, int y) {
+  digitalWriteFast(VID_PIN,  LOW);
+  if (y < 9) {
+    // 9 pulse lines:
+    // 6 pre equalizing pulses
+    // 6 sync pulses
+    // 6 post equalizing pulses
+    int pulse = y/3 % 2;
+    int pulseDelay = pulse ? 4 : 2;
+    int hx = x / 2;
+    if (hx < pulseDelay) {
+      digitalWriteFast(SYNC_PIN,pulse);
+    }
+    else {
+      digitalWriteFast(SYNC_PIN,!pulse);
+    }
+  }
+  else {
+    // 11 black lines
+    if (x < 5) {
+      digitalWriteFast(SYNC_PIN,LOW);
+    }
+    else { 
+      digitalWriteFast(SYNC_PIN,HIGH);
+    }
+  }
+}
+
+void halfline(int x) {
   digitalWriteFast(VID_PIN, LOW);
-  digitalWriteFast(SYNC_PIN,LOW);
-  delayMicroseconds(5);
-
-  // back porch
-  digitalWriteFast(VID_PIN,  LOW);
-  digitalWriteFast(SYNC_PIN,HIGH);
-  delayMicroseconds(4);
-
-  // picture
-  drawBuffer();
-
-  // front porch
-  digitalWriteFast(VID_PIN,  LOW);
-  digitalWriteFast(SYNC_PIN,HIGH);
-  delayMicroseconds(1);
-}
-
-void vsync() {
-  digitalWriteFast(VID_PIN,  LOW);
-  // 9 pulse frames
-  // 6 pre equalizing pulses
-  for(int i=0; i<5; i++) {
-    digitalWriteFast(SYNC_PIN,LOW);
-    delayMicroseconds(5);
-    digitalWriteFast(SYNC_PIN,HIGH);
-    delayMicroseconds(27);
-  }
-  // 6 vertical sync pulses
-  for(int i=0; i<5; i++) {
-    digitalWriteFast(SYNC_PIN,HIGH);
-    delayMicroseconds(2);
-    digitalWriteFast(SYNC_PIN,LOW);
-    delayMicroseconds(30);
-  }
-  // 6 post equalizing pulses
-  for(int i=0; i<5; i++) {
-    digitalWriteFast(SYNC_PIN,LOW);
-    delayMicroseconds(2);
-    digitalWriteFast(SYNC_PIN,HIGH);
-    delayMicroseconds(30);
-  }
-  // 11 black frames
-  for(int i=0; i<10; i++) {
-    digitalWriteFast(SYNC_PIN,LOW);
-    delayMicroseconds(5);
-    digitalWriteFast(SYNC_PIN,HIGH);
-    delayMicroseconds(58);
-  }
-}
-
-void halfline() {
-  // just treating as filler for now
-  digitalWriteFast(VID_PIN, LOW);
-  digitalWriteFast(SYNC_PIN,LOW);
-  delayMicroseconds(5);
-  digitalWriteFast(SYNC_PIN,HIGH);
-  delayMicroseconds(2);
+  digitalWriteFast(SYNC_PIN, x < 6);
 }
 
 void setup() {
@@ -105,14 +90,25 @@ void setup() {
 }
 
 void loop() {
+  elapsedMicros ts;
   while(1) {
-    vsync();
-    for(lineCount=0; lineCount < HEIGHT; lineCount++) {
-      scanline();
+    int x = ts % 63;
+    int y = ts / 63;
+    if (ts==0) {
+      setupBuffer();
     }
-    halfline();
-    evenFrame = !evenFrame;
-    frameCount++;
-    setupBuffer();
+    if (y < 20) {
+      vsync(x, y);
+    }
+    else if(y < 263) {
+      scanline(x, y);
+    }
+    else if(ts < 16637) { // admittedly hand-tuned, should be 16537-16667
+      halfline(x);
+    }
+    else {
+      ts = 0;
+      frameCount++;
+    }
   }
 }
