@@ -7,7 +7,7 @@
 
 volatile int frameCount = 0;
 volatile bool vblank = false;
-bool * dst_buf = (bool*)malloc(WIDTH * VHEIGHT);
+uint8_t * dst_buf = (uint8_t*)malloc(WIDTH * VHEIGHT);
 
 void setupBuffer() {
   for(int i=0; i< WIDTH * VHEIGHT; i++) {
@@ -18,14 +18,20 @@ void setupBuffer() {
     int dx = W2 - x;
     int dy = H2 - y;
     int hypo = sqrt(dx*dx + dy*dy);
-    dst_buf[i] = sin((float)(hypo - frameCount / 2.0)) > 0;
+    dst_buf[i] = (int)(hypo * (sin(frameCount / 40.0) + 1)) % 4;
   }
 }
 
 void drawBuffer(int x, int y) {
+  // x value starts at sample 9, y value starts at line 19
   int i = x - 9;
   int j = VHEIGHT * (y - 19) / HEIGHT;
-  digitalWriteFast(VID_PIN, dst_buf[i + j * WIDTH]);
+  uint8_t px = dst_buf[i + j * WIDTH];
+  uint8_t hb = px >> 1;
+  uint8_t lb = 0x1 & px;
+  digitalWriteFast(VID_PIN, hb || lb);
+  digitalWriteFast(SYNC_PIN, !(hb ^ lb));
+//  digitalWriteFast(VID_PIN, px);
 }
 
 void scanline(int x, int y) {
@@ -41,8 +47,6 @@ void scanline(int x, int y) {
   }
   else if(x < 62) {
     drawBuffer(x, y);
-//    digitalWriteFast(VID_PIN, HIGH);
-    digitalWriteFast(SYNC_PIN,HIGH);
   }
   else {
     digitalWriteFast(VID_PIN,  LOW);
