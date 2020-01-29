@@ -1,6 +1,3 @@
-#define VID_PIN 15
-#define SYNC_PIN 14
-
 #define WIDTH 52
 #define HEIGHT 242
 #define VHEIGHT 39
@@ -9,16 +6,28 @@ volatile int frameCount = 0;
 volatile bool vblank = false;
 uint8_t * dst_buf = (uint8_t*)malloc(WIDTH * VHEIGHT);
 
+void writeComposite(uint8_t v) {
+  int fv = 0xf & v;
+  int a = 0x1 & fv;
+  int b = 0x2 & fv;
+  int c = 0x4 & fv;
+  int d = 0x8 & fv;
+  digitalWriteFast(14, a);
+  digitalWriteFast(15, b);
+  digitalWriteFast(16, c);
+  digitalWriteFast(17, d);
+}
+
 void setupBuffer() {
+//  int H2 = VHEIGHT / 2;
+//  int W2 = WIDTH / 2;
   for(int i=0; i< WIDTH * VHEIGHT; i++) {
     int x = i % WIDTH;
     int y = i / WIDTH;
-    int H2 = VHEIGHT / 2;
-    int W2 = WIDTH / 2;
-    int dx = W2 - x;
-    int dy = H2 - y;
-    int hypo = sqrt(dx*dx + dy*dy);
-    dst_buf[i] = (int)(hypo * (sin(frameCount / 40.0) + 1)) % 4;
+//    int dx = W2 - x;
+//    int dy = H2 - y;
+//    int hypo = sqrt(dx*dx + dy*dy);
+    dst_buf[i] = 9 + (float)( 3.0 * (sin(frameCount / 13.0 + y / 4.0) - cos(frameCount / 17.0 + x / 3.0)));
   }
 }
 
@@ -27,35 +36,27 @@ void drawBuffer(int x, int y) {
   int i = x - 9;
   int j = VHEIGHT * (y - 19) / HEIGHT;
   uint8_t px = dst_buf[i + j * WIDTH];
-  uint8_t hb = px >> 1;
-  uint8_t lb = 0x1 & px;
-  digitalWriteFast(VID_PIN, hb || lb);
-  digitalWriteFast(SYNC_PIN, !(hb ^ lb));
-//  digitalWriteFast(VID_PIN, px);
+  writeComposite(max(1,px));
 }
 
 void scanline(int x, int y) {
   if (x < 5) {
     // sync
-    digitalWriteFast(VID_PIN, LOW);
-    digitalWriteFast(SYNC_PIN,LOW);
+    writeComposite(0);
   }
   else if(x < 10) {
     // back porch
-    digitalWriteFast(VID_PIN, LOW);
-    digitalWriteFast(SYNC_PIN,HIGH);
+    writeComposite(1);
   }
   else if(x < 62) {
     drawBuffer(x, y);
   }
   else {
-    digitalWriteFast(VID_PIN,  LOW);
-    digitalWriteFast(SYNC_PIN,HIGH);
+    writeComposite(1);
   }
 }
 
 void vsync(int x, int y) {
-  digitalWriteFast(VID_PIN,  LOW);
   if (y < 9) {
     // 9 pulse lines:
     // 6 pre equalizing pulses
@@ -65,31 +66,27 @@ void vsync(int x, int y) {
     int pulseDelay = pulse ? 4 : 2;
     int hx = x / 2;
     if (hx < pulseDelay) {
-      digitalWriteFast(SYNC_PIN,pulse);
+      writeComposite(pulse ? 1 : 0);
     }
     else {
-      digitalWriteFast(SYNC_PIN,!pulse);
+      writeComposite(pulse ? 0 : 1);
     }
   }
   else {
     // 11 black lines
-    if (x < 5) {
-      digitalWriteFast(SYNC_PIN,LOW);
-    }
-    else { 
-      digitalWriteFast(SYNC_PIN,HIGH);
-    }
+    writeComposite(x < 5 ? 0 : 1);
   }
 }
 
 void halfline(int x) {
-  digitalWriteFast(VID_PIN, LOW);
-  digitalWriteFast(SYNC_PIN, x < 6);
+  writeComposite(x < 6 ? 1 : 0);
 }
 
 void setup() {
-  pinMode(VID_PIN,  OUTPUT);
-  pinMode(SYNC_PIN, OUTPUT);
+  pinMode(14,  OUTPUT);
+  pinMode(15,  OUTPUT);
+  pinMode(16,  OUTPUT);
+  pinMode(17,  OUTPUT);
   setupBuffer();
 }
 
