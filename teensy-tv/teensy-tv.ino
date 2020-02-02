@@ -28,16 +28,13 @@ void writeComposite(uint8_t v) {
 void readRawHID() {
   byte incomingBuffer[64];
   if(RawHID.available()) {
-    int response = RawHID.recv(incomingBuffer, 0);
-    if (response > 0) {
-      if (usbPosition + response < WIDTH * VHEIGHT) {
-        memcpy(screenBuffer + usbPosition, incomingBuffer, sizeof(incomingBuffer[0]) * response);
+    int responseLength = RawHID.recv(incomingBuffer, 0);
+    if (responseLength > 0) {
+      if (usbPosition + responseLength >= WIDTH * VHEIGHT) {
+        responseLength = WIDTH * VHEIGHT - usbPosition;
       }
-      else {
-        int maxLength = WIDTH * VHEIGHT - usbPosition;
-        memcpy(screenBuffer + usbPosition, incomingBuffer, sizeof(incomingBuffer[0]) * maxLength);
-      }
-      usbPosition += response;
+      memcpy(screenBuffer + usbPosition, incomingBuffer, responseLength);
+      usbPosition += responseLength;
       if (usbPosition >= WIDTH * VHEIGHT) {
         usbPosition = 0;
       }
