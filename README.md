@@ -4,7 +4,7 @@
 
 Teensy TV is an experiment in driving component NTSC video from a Teensy 4.0.
 
-Teensy TV is currently comprised of two parts: the Arduino IDE source code, and a Node.js server that sends data to the Teensy. The Teensy is set to run as a RawHID USB device so we can send 64-byte packets to it. Each packet progressively updates the screen buffer, which is 52 wide x 39 tall x 15 shades of gray (4 bit).
+Teensy TV is currently comprised of two parts: Arduino source code running on a Teensy 4.0, and a Node.js server that sends data to the Teensy. The Teensy acts as a RawHID USB device so we can send 64-byte packets to it. Each packet progressively updates the screen buffer, which is 52 wide x 39 tall x 15 shades of gray (4 bit).
 
 ## Hardware
 
@@ -22,7 +22,9 @@ At the start of each frame, the Teensy checks for incoming packets on the USB bu
 
 When updating the Teensy's firmware, the USB Type in the Tools menu must be set to "Raw HID". Otherwise the device will not be able to receive the raw USB packets we send it.
 
-## Web code
+## Web interface
+
+![A screenshot of the web interface used to upload pictures to the TV](img/webinterface.png)
 
 ```shell
   cd web
