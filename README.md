@@ -30,7 +30,7 @@ When updating the Teensy's firmware, the USB Type in the Tools menu must be set 
   yarn start
 ```
 
-This will begin the server at `localhost:3000`. The Node server both hosts a webpage at this address, and passes POSTs to `localhost:300/tv` to the Teensy. If the Teensy is not detected, the Node server will log the problem to the console.
+This will begin the server at `localhost:3000`. The Node server both hosts a webpage at this address, and passes POSTs to `localhost:3000/tv` to the Teensy. If the Teensy is not detected, the Node server will log the problem to the console.
 
 ## References
 
