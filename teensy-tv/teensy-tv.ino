@@ -3,7 +3,7 @@
 #define VHEIGHT 39
 
 uint8_t screenBuffer[WIDTH * VHEIGHT];
-int usbPosition = 0;
+volatile int usbPosition = 0;
 volatile int frameCount = 0;
 
 void setupBuffer() {
@@ -14,11 +14,10 @@ void setupBuffer() {
 }
 
 void writeComposite(uint8_t v) {
-  int fv = 0xf & v;
-  int a = 0x1 & fv;
-  int b = 0x2 & fv;
-  int c = 0x4 & fv;
-  int d = 0x8 & fv;
+  int a = 0x1 & v;
+  int b = 0x2 & v;
+  int c = 0x4 & v;
+  int d = 0x8 & v;
   digitalWriteFast(14, a);
   digitalWriteFast(15, b);
   digitalWriteFast(16, c);
@@ -26,8 +25,8 @@ void writeComposite(uint8_t v) {
 }
 
 void readRawHID() {
-  byte incomingBuffer[64];
-  if(RawHID.available()) {
+  while(RawHID.available()) {
+    byte incomingBuffer[64];
     int responseLength = RawHID.recv(incomingBuffer, 0);
     if (responseLength > 0) {
       if (usbPosition + responseLength >= WIDTH * VHEIGHT) {
@@ -106,7 +105,7 @@ void loop() {
   while(1) {
     int x = ts % 63;
     int y = ts / 63;
-    if (ts==0) {
+    if(ts == 0) {
       readRawHID();
     }
     if (y < 20) {
