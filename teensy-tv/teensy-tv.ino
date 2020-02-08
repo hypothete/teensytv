@@ -9,7 +9,8 @@ volatile int frameCount = 0;
 void setupBuffer() {
   for(int i=0; i< WIDTH * VHEIGHT; i++) {
     int x = i % WIDTH;
-    screenBuffer[i] = x % 16;
+    int y = i / WIDTH;
+    screenBuffer[i] = (x % 16) ^ (y % 16);
   }
 }
 
