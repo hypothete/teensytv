@@ -1,3 +1,7 @@
+#define PIN_A 14
+#define PIN_B 15
+#define PIN_C 16
+#define PIN_D 17
 #define WIDTH 52
 #define HEIGHT 242
 #define VHEIGHT 39
@@ -15,14 +19,11 @@ void setupBuffer() {
 }
 
 void writeComposite(uint8_t v) {
-  int a = 0x1 & v;
-  int b = 0x2 & v;
-  int c = 0x4 & v;
-  int d = 0x8 & v;
-  digitalWriteFast(14, a);
-  digitalWriteFast(15, b);
-  digitalWriteFast(16, c);
-  digitalWriteFast(17, d);
+  // tied to schematic, consult core_pins.h
+  uint32_t ab = (0x3 & v) << 18;
+  uint32_t c = (0x4 & v) << 21;
+  uint32_t d = (0x8 & v) << 19;
+  GPIO6_DR = (GPIO6_DR & ~13369344) | ab | c | d;
 }
 
 void readRawHID() {
@@ -94,10 +95,10 @@ void halfline(int x) {
 }
 
 void setup() {
-  pinMode(14,  OUTPUT);
-  pinMode(15,  OUTPUT);
-  pinMode(16,  OUTPUT);
-  pinMode(17,  OUTPUT);
+  pinMode(PIN_A,  OUTPUT);
+  pinMode(PIN_B,  OUTPUT);
+  pinMode(PIN_C,  OUTPUT);
+  pinMode(PIN_D,  OUTPUT);
   setupBuffer();
 }
 
@@ -115,7 +116,7 @@ void loop() {
     else if(y < 263) {
       scanline(x, y);
     }
-    else if(ts < 16637) { // admittedly hand-tuned, should be 16537-16667
+    else if(ts < 16538) { // admittedly hand-tuned, should be 16537-16667
       halfline(x);
     }
     else {
