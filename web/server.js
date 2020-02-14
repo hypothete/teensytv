@@ -18,7 +18,7 @@ app.post('/tv', (req, res) => {
   }
   else {
     console.log('No Teensy found');
-    res.sendStatus(404);
+    res.sendStatus(503);
     return;
   }
   sendBytesToDevice(req.body);

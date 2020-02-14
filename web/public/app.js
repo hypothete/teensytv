@@ -1,17 +1,18 @@
 const can = document.querySelector('canvas');
 const ctx = can.getContext('2d');
 can.width = 52;
-can.height = 39;
+can.height = 242;
 // ctx.imageSmoothingEnabled = false;
-
-const fileInput = document.querySelector('input');
+let imageCache;
+const fileInput = document.querySelector('#upload');
+const resubmitButton = document.querySelector('#resubmit');
 
 can.addEventListener('dragenter', dragEnterHandler, false);
 can.addEventListener('dragleave', dragLeaveHandler, false);
 can.addEventListener('dragover', dragOverHandler, false);
 can.addEventListener('drop', dropHandler, false);
-
-fileInput.addEventListener('change', uploadHandler);
+resubmitButton.addEventListener('click', resubmitHandler, false);
+fileInput.addEventListener('change', uploadHandler, false);
 
 function dragEnterHandler(e) {
   e.preventDefault();
@@ -40,25 +41,36 @@ function dropHandler(e) {
   loadImage(files[0]);
 }
 
+function resubmitHandler() {
+  drawUpload(imageCache);
+}
+
 function loadImage(file) {
   const img = new Image;
   img.onload = () => {
-    // clear canvas
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0,0,can.width,can.height);
-    const w = img.width;
-    const h = img.height;
-    // fill canvas
-    const ratio = Math.max(can.width / w, can.height / h);
-    const dw = ratio * w;
-    const dh = ratio * h;
-    const dx = (can.width - w * ratio) / 2;
-    const dy = (can.height - h * ratio) / 2;
-    ctx.drawImage(img, 0, 0, w, h, dx, dy, dw, dh);
-    // convert to grayscale
-    processBitmap();
+    drawUpload(img);
   };
   img.src = URL.createObjectURL(file);
+}
+
+function drawUpload(img) {
+  // clear canvas
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0,0,can.width,can.height);
+  const w = img.width;
+  const h = img.height;
+  // fill canvas
+  const yratio = can.height * 4 / (can.width * 3);
+  const ratio = Math.max(can.width / w, can.height / (h * yratio));
+  const dw = w * ratio;
+  const dh = h * ratio * yratio;
+  const dx = (can.width - w * ratio) / 2;
+  const dy = (can.height - h * ratio * yratio) / 2;
+  ctx.drawImage(img, 0, 0, w, h, dx, dy, dw, dh);
+  // save image
+  imageCache = img;
+  // convert to grayscale & send
+  processBitmap();
 }
 
 function processBitmap() {
