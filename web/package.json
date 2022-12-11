@@ -9,7 +9,7 @@
   "author": "Duncan Alexander <duncan@hypothete.com>",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "node-hid": "^1.1.0"
   }
 }
